@@ -3,24 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class BookController extends Controller
 {
-    // GET /api/books - Return all books, optionally filtered
+    // GET /api/books - Return all books with optional filters
     public function index(Request $request): JsonResponse
     {
-        $query = Book::with(['genre', 'reviews']);
+        $query = Book::with('genre');
 
-        if ($request->has('genre_id')) {
-            $query->where('genre_id', $request->genre_id);
+        // Filter by genre (accepts both 'genre' and 'genre_id' parameters)
+        if ($request->has('genre') || $request->has('genre_id')) {
+            $genreId = $request->input('genre') ?? $request->input('genre_id');
+            $query->where('genre_id', $genreId);
         }
 
-        if ($request->has('available')) {
-            $query->where('available', $request->boolean('available'));
+        // Filter by claimed status (frontend sends 'claimed', we check 'available')
+        if ($request->has('claimed')) {
+            $isClaimed = $request->boolean('claimed');
+            // If claimed=true, we want books where available=false
+            // If claimed=false, we want books where available=true
+            $query->where('available', !$isClaimed);
         }
 
+        // Search functionality
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -65,8 +72,10 @@ class BookController extends Controller
             'title' => 'required|string|max:255',
             'author' => 'required|string|max:255',
             'genre_id' => 'required|exists:genres,id',
-            'description' => 'nullable|string',
-            'image_url' => 'nullable|url'
+            'blurb' => 'nullable|string|max:1000',
+            'image' => 'nullable|url|max:500',
+            'year' => 'nullable|integer|min:1000|max:' . (date('Y') + 1),
+            'page_count' => 'nullable|integer|min:1|max:10000',
         ]);
 
         $book = Book::create($validated);
@@ -101,12 +110,14 @@ class BookController extends Controller
         }
 
         $validated = $request->validate([
-            'claimed_by' => 'required|string|max:255'
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
         ]);
 
         $book->update([
             'available' => false,
-            'claimed_by' => $validated['claimed_by']
+            'claimed_by_name' => $validated['name'],
+            'claimed_by_email' => $validated['email'],
         ]);
 
         $book->load(['genre', 'reviews']);
@@ -133,7 +144,9 @@ class BookController extends Controller
 
         $book->update([
             'available' => true,
-            'claimed_by' => null
+            'claimed_by' => null,
+            'claimed_by_name' => null,
+            'claimed_by_email' => null,
         ]);
 
         $book->load(['genre', 'reviews']);
