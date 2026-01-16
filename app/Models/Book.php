@@ -12,14 +12,19 @@ class Book extends Model
         'title',
         'author',
         'genre_id',
-        'description',
-        'image_url',
+        'blurb',
+        'image',
+        'year',
+        'page_count',
         'available',
-        'claimed_by'
+        'claimed_by_name',
+        'claimed_by_email',
     ];
 
     protected $casts = [
         'available' => 'boolean',
+        'year' => 'integer',
+        'page_count' => 'integer',
     ];
 
     public function genre(): BelongsTo
