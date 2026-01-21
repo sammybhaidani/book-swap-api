@@ -14,6 +14,19 @@ class Review extends Model
         'rating'
     ];
 
+    protected $hidden = ['reviewer_name', 'review_text'];
+    protected $appends = ['name', 'review'];
+
+    public function getNameAttribute(): string
+    {
+        return $this->reviewer_name;
+    }
+
+    public function getReviewAttribute(): string
+    {
+        return $this->review_text;
+    }
+
     public function book(): BelongsTo
     {
         return $this->belongsTo(Book::class);
