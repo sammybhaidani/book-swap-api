@@ -39,9 +39,8 @@ class BookController extends Controller
         $books = $query->get();
 
         return response()->json([
-            'status' => 200,
-            'message' => 'Books retrieved successfully',
-            'data' => $books
+            'data' => $books,
+            'message' => 'Books successfully retrieved'
         ]);
     }
 
@@ -52,16 +51,13 @@ class BookController extends Controller
 
         if (!$book) {
             return response()->json([
-                'status' => 404,
-                'message' => 'Book not found',
-                'data' => null
+                'message' => "Book with id {$id} not found"
             ], 404);
         }
 
         return response()->json([
-            'status' => 200,
-            'message' => 'Book retrieved successfully',
-            'data' => $book
+            'data' => $book,
+            'message' => 'Book successfully found'
         ]);
     }
 
@@ -82,9 +78,7 @@ class BookController extends Controller
         $book->load(['genre', 'reviews']);
 
         return response()->json([
-            'status' => 201,
-            'message' => 'Book created successfully',
-            'data' => $book
+            'message' => 'Book created'
         ], 201);
     }
 
@@ -95,17 +89,13 @@ class BookController extends Controller
 
         if (!$book) {
             return response()->json([
-                'status' => 404,
-                'message' => 'Book not found',
-                'data' => null
+                'message' => "Book {$id} was not found"
             ], 404);
         }
 
         if (!$book->available) {
             return response()->json([
-                'status' => 400,
-                'message' => 'Book is not available',
-                'data' => null
+                'message' => "Book {$id} is already claimed"
             ], 400);
         }
 
@@ -120,42 +110,53 @@ class BookController extends Controller
             'claimed_by_email' => $validated['email'],
         ]);
 
-        $book->load(['genre', 'reviews']);
-
         return response()->json([
-            'status' => 200,
-            'message' => 'Book claimed successfully',
-            'data' => $book
+            'message' => "Book {$id} was claimed"
         ]);
     }
 
-    // PUT /api/books/{id}/return - Return a book
-    public function returnBook(int $id): JsonResponse
+    // PUT /api/books/return/{id} - Return a book
+    public function returnBook(Request $request, int $id): JsonResponse
     {
         $book = Book::find($id);
 
         if (!$book) {
             return response()->json([
-                'status' => 404,
-                'message' => 'Book not found',
-                'data' => null
+                'message' => "Book {$id} was not found"
             ], 404);
         }
 
-        $book->update([
-            'available' => true,
-            'claimed_by' => null,
-            'claimed_by_name' => null,
-            'claimed_by_email' => null,
+        if ($book->available) {
+            return response()->json([
+                'message' => "Book {$id} is not currently claimed"
+            ], 400);
+        }
+
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
         ]);
 
-        $book->load(['genre', 'reviews']);
+        if ($book->claimed_by_email !== $validated['email']) {
+            return response()->json([
+                'message' => "Book {$id} was not returned. {$validated['email']} did not claim this book."
+            ], 400);
+        }
 
-        return response()->json([
-            'status' => 200,
-            'message' => 'Book returned successfully',
-            'data' => $book
-        ]);
+        try {
+            $book->update([
+                'available' => true,
+                'claimed_by_name' => null,
+                'claimed_by_email' => null,
+            ]);
+
+            return response()->json([
+                'message' => "Book {$id} was returned"
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => "Book {$id} was not able to be returned"
+            ], 500);
+        }
     }
 
     // DELETE /api/books/{id} - Delete a book
@@ -165,18 +166,14 @@ class BookController extends Controller
 
         if (!$book) {
             return response()->json([
-                'status' => 404,
-                'message' => 'Book not found',
-                'data' => null
+                'message' => "Book {$id} was not found"
             ], 404);
         }
 
         $book->delete();
 
         return response()->json([
-            'status' => 200,
-            'message' => 'Book deleted successfully',
-            'data' => null
+            'message' => "Book {$id} was deleted"
         ]);
     }
 }
