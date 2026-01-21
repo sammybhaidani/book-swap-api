@@ -12,9 +12,8 @@ class GenreController extends Controller
         $genres = Genre::all();
 
         return response()->json([
-            'status' => 200,
-            'message' => 'Genres retrieved successfully',
-            'data' => $genres
+            'data' => $genres,
+            'message' => 'Genres retrieved'
         ]);
     }
 }
