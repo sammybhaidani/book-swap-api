@@ -8,22 +8,24 @@ use Illuminate\Http\JsonResponse;
 
 class ReviewController extends Controller
 {
-    public function store(Request $request, int $bookId): JsonResponse
+    public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'reviewer_name' => 'required|string|max:255',
-            'review_text' => 'required|string',
-            'rating' => 'required|integer|min:1|max:5'
+            'name' => 'required|string|max:255',
+            'review' => 'required|string',
+            'rating' => 'required|integer|min:0|max:5',
+            'book_id' => 'required|integer|exists:books,id'
         ]);
 
-        $validated['book_id'] = $bookId;
-
-        $review = Review::create($validated);
+        $review = Review::create([
+            'book_id' => $validated['book_id'],
+            'reviewer_name' => $validated['name'],
+            'review_text' => $validated['review'],
+            'rating' => $validated['rating']
+        ]);
 
         return response()->json([
-            'status' => 201,
-            'message' => 'Review created successfully',
-            'data' => $review
+            'message' => 'Review created'
         ], 201);
     }
 }
